@@ -4,6 +4,12 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Downloads — ARC-NETWORK</title>
 <link rel="stylesheet" href="/css/main.css">
+<style>
+  .sw-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:1.5px;padding:3px 9px;border:1px solid;text-transform:uppercase;}
+  .badge-file{border-color:rgba(34,197,94,.4);color:#22c55e;background:rgba(34,197,94,.07);}
+  .badge-nofile{border-color:var(--border2);color:var(--muted);}
+  .dl-btn{min-width:130px;}
+</style>
 </head>
 <body>
 <div class="page-wrap">
@@ -13,7 +19,9 @@
     <h2 class="section-title">Software <em>Downloads</em></h2>
     <div class="section-line"></div>
   </div>
-  <div id="sw-list"><div style="font-family:var(--font-mono);font-size:.8rem;color:var(--muted)">LOADING DEPOT...</div></div>
+  <div id="sw-list">
+    <div style="font-family:var(--font-mono);font-size:.8rem;color:var(--muted);padding:2rem 0">LOADING DEPOT...</div>
+  </div>
 </div>
 </div>
 <script src="/js/api.js"></script>
@@ -23,36 +31,77 @@
 async function load() {
   try {
     const { software } = await API.getSoftware();
-    document.getElementById('sw-list').innerHTML = software.map(sw => `
-      <div class="sw-item reveal">
-        <div class="sw-icon">${UI.escHtml(sw.icon)}</div>
-        <div class="sw-info">
-          <div class="sw-name">${UI.escHtml(sw.name)}</div>
-          <div class="sw-desc">${UI.escHtml(sw.description)}</div>
-          <div class="sw-meta">
-            VER <span>${UI.escHtml(sw.version)}</span> |
-            PLATFORM <span>${UI.escHtml(sw.platform)}</span> |
-            CATEGORY <span>${UI.escHtml(sw.category)}</span> |
-            SIZE <span>${UI.escHtml(sw.size)}</span> |
-            DOWNLOADS <span>${sw.downloads}</span>
+    if (!software.length) {
+      document.getElementById('sw-list').innerHTML = '<div style="font-family:var(--font-mono);font-size:.8rem;color:var(--muted);padding:2rem 0">NO SOFTWARE IN DEPOT YET</div>';
+      return;
+    }
+    document.getElementById('sw-list').innerHTML = software.map(sw => {
+      var hasFile = sw.filename ? true : false;
+      var badge = hasFile
+        ? '<span class="sw-badge badge-file">📁 FILE READY</span>'
+        : '<span class="sw-badge badge-nofile">📋 METADATA ONLY</span>';
+      return `
+        <div class="sw-item reveal" id="sw-${sw.id}">
+          <div class="sw-icon">${UI.escHtml(sw.icon||'📦')}</div>
+          <div class="sw-info">
+            <div class="sw-name">${UI.escHtml(sw.name)} <span style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted)">v${UI.escHtml(sw.version)}</span></div>
+            <div class="sw-desc">${UI.escHtml(sw.description)}</div>
+            <div class="sw-meta" style="display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;margin-top:6px">
+              <span>PLATFORM <b>${UI.escHtml(sw.platform)}</b></span>
+              <span>SIZE <b>${UI.escHtml(sw.size)}</b></span>
+              <span>⬇ <b>${sw.downloads}</b></span>
+              ${badge}
+            </div>
           </div>
-        </div>
-        <button class="btn btn-cyan" onclick="dl('${sw.id}', this)">DOWNLOAD</button>
-      </div>`).join('');
+          <button class="btn btn-cyan dl-btn" onclick="dl('${sw.id}','${UI.escHtml(sw.name)}',${hasFile},this)">
+            ${hasFile ? '⬇ DOWNLOAD' : '📋 LOG'}
+          </button>
+        </div>`;
+    }).join('');
     UI.initScrollReveal();
-  } catch(e) { UI.notify(e.message, 'error'); }
+  } catch(e) {
+    document.getElementById('sw-list').innerHTML = '<div style="font-family:var(--font-mono);font-size:.8rem;color:var(--red-b);padding:2rem 0">ERROR LOADING DEPOT: '+UI.escHtml(e.message)+'</div>';
+  }
 }
 
-async function dl(id, btn) {
-  if (!API.isLoggedIn()) { UI.notify('LOGIN REQUIRED TO DOWNLOAD', 'error'); setTimeout(() => window.location.href='/login', 1000); return; }
+async function dl(id, name, hasFile, btn) {
+  if (!API.isLoggedIn()) {
+    UI.notify('LOGIN REQUIRED TO DOWNLOAD', 'error');
+    setTimeout(() => window.location.href = '/login', 1200);
+    return;
+  }
+
+  var orig = btn.textContent;
+  btn.textContent = '...'; btn.disabled = true;
+
   try {
-    btn.textContent = '...'; btn.disabled = true;
-    const d = await API.download(id);
-    UI.notify('DOWNLOAD STARTED: ' + d.software.name);
-    btn.textContent = '✓ DONE'; btn.style.background = 'var(--green)';
-    setTimeout(() => { btn.textContent = 'DOWNLOAD'; btn.disabled = false; btn.style.background = ''; }, 3000);
-    load();
-  } catch(e) { UI.notify(e.message, 'error'); btn.textContent = 'DOWNLOAD'; btn.disabled = false; }
+    var data = await API.download(id);
+
+    if (data.hasFile) {
+      // File download triggered by API.download() via <a> tag
+      btn.textContent = '✓ DOWNLOADING';
+      btn.style.background = 'var(--green)';
+      UI.notify('⬇ DOWNLOADING: ' + name);
+    } else {
+      // No file — just logged
+      btn.textContent = '✓ LOGGED';
+      btn.style.background = 'rgba(124,58,237,.5)';
+      UI.notify('LOGGED: ' + name + ' (no file attached)');
+    }
+
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.background = '';
+      btn.disabled = false;
+      load(); // refresh download count
+    }, 3000);
+
+  } catch(e) {
+    UI.notify(e.message, 'error');
+    btn.textContent = orig;
+    btn.style.background = '';
+    btn.disabled = false;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', load);

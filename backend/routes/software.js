@@ -2,63 +2,154 @@
 const path = require('path');
 const fs   = require('fs');
 const DB   = require('../db/database');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireAdmin, verifyToken } = require('../middleware/auth');
 const { ok, err } = require('../utils/respond');
 const { parseMultipart, formatSize } = require('../utils/multipart');
 
+// ── List all software ─────────────────────────────────────────
 function list(req, res) {
   ok(res, { software: DB.getAllSoftware() });
 }
 
-// ── Upload with actual file ───────────────────────────────────
+// ── Upload (admin only, supports real file or metadata-only) ──
 async function upload(req, res) {
   const admin = requireAdmin(req);
   if (!admin) return err(res, 403, 'Admin only');
 
   const contentType = req.headers['content-type'] || '';
-
   let name, version, category, platform, description, size, icon, filename = null;
 
   if (contentType.includes('multipart/form-data')) {
     try {
       const { fields, files } = await parseMultipart(req);
-      name        = fields.name;
-      version     = fields.version;
-      category    = fields.category;
-      platform    = fields.platform;
-      description = fields.description;
-      icon        = fields.icon;
+      name        = (fields.name        || '').trim();
+      version     = (fields.version     || '').trim();
+      category    = (fields.category    || 'Other').trim();
+      platform    = (fields.platform    || 'Linux').trim();
+      description = (fields.description || '').trim();
+      icon        = (fields.icon        || '📦').trim();
 
       if (files.file) {
-        const f = files.file;
-        size     = formatSize(f.size);
-        filename = f.savedName;
+        size     = formatSize(files.file.size);
+        filename = files.file.savedName;
+        console.log(`[Upload] File saved: ${filename} (${size})`);
       } else {
-        size = fields.size;
+        size = (fields.size || 'Unknown').trim();
       }
     } catch (e) {
+      console.error('[Upload] Parse error:', e.message);
       return err(res, 400, 'Upload failed: ' + e.message);
     }
   } else {
-    // JSON body (no file)
+    // JSON-only (no file)
     const body = await parseBody(req);
-    ({ name, version, category, platform, description, size, icon } = body);
+    name        = (body.name        || '').trim();
+    version     = (body.version     || '').trim();
+    category    = (body.category    || 'Other').trim();
+    platform    = (body.platform    || 'Linux').trim();
+    description = (body.description || '').trim();
+    size        = (body.size        || 'Unknown').trim();
+    icon        = (body.icon        || '📦').trim();
   }
 
-  if (!name || !version) return err(res, 400, 'Name and version required');
+  if (!name || !version) return err(res, 400, 'Name and version are required');
 
   const sw = DB.addSoftware({
-    name, version,
-    category:    category    || 'Other',
-    platform:    platform    || 'Linux',
-    description: description || '',
-    size:        size        || 'Unknown',
-    icon:        icon        || '📦',
-    filename:    filename,
-    uploadedBy:  admin.username,
+    name, version, category, platform,
+    description: description || 'No description provided.',
+    size, icon, filename,
+    uploadedBy: admin.username,
   });
 
+  console.log(`[Upload] Added: ${sw.name} v${sw.version} | file: ${filename || 'none'}`);
   ok(res, { software: sw });
+}
+
+// ── Log download + return whether a real file exists ──────────
+async function download(req, res, parsed) {
+  const user = requireAuth(req);
+  if (!user) return err(res, 401, 'Login required to download');
+
+  const id = parsed.pathname.split('/').filter(Boolean)[2];
+  const sw = DB.getSoftwareById(id);
+  if (!sw) return err(res, 404, 'Software not found');
+
+  DB.incrementDownload(id);
+  DB.logDownload(user.id, id);
+
+  const hasFile = !!(sw.filename && fs.existsSync(
+    path.join(__dirname, '..', 'uploads', sw.filename)
+  ));
+
+  ok(res, {
+    hasFile,
+    filename: sw.filename ? `${sw.name}_v${sw.version}${path.extname(sw.filename)}` : null,
+    software: sw,
+    message: hasFile
+      ? `Downloading ${sw.name} v${sw.version}`
+      : `Download logged: ${sw.name} v${sw.version} (no file attached)`,
+  });
+}
+
+// ── Serve the actual file bytes ───────────────────────────────
+// GET /api/software/:id/file?token=JWT
+function serveFile(req, res, parsed) {
+  // Auth via query param token (since it's a direct browser navigation)
+  const token = parsed.query.token || '';
+  const payload = token ? verifyToken(token) : null;
+  if (!payload) {
+    res.writeHead(401, { 'Content-Type': 'text/plain' });
+    res.end('Unauthorized — please log in');
+    return;
+  }
+
+  const id = parsed.pathname.split('/').filter(Boolean)[2];
+  const sw = DB.getSoftwareById(id);
+  if (!sw || !sw.filename) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('File not found');
+    return;
+  }
+
+  const filePath = path.join(__dirname, '..', 'uploads', sw.filename);
+  if (!fs.existsSync(filePath)) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('File not found on server');
+    return;
+  }
+
+  const stat     = fs.statSync(filePath);
+  const ext      = path.extname(sw.filename).toLowerCase();
+  const dlName   = `${sw.name}_v${sw.version}${ext}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  console.log(`[Download] Serving file: ${dlName} (${formatSize(stat.size)}) to user ${payload.id}`);
+
+  res.writeHead(200, {
+    'Content-Type':        'application/octet-stream',
+    'Content-Disposition': `attachment; filename="${dlName}"`,
+    'Content-Length':      stat.size,
+    'Cache-Control':       'no-cache',
+  });
+  fs.createReadStream(filePath).pipe(res);
+}
+
+// ── Delete software + its file ────────────────────────────────
+async function deleteSw(req, res, parsed) {
+  const admin = requireAdmin(req);
+  if (!admin) return err(res, 403, 'Admin only');
+
+  const id = parsed.pathname.split('/').filter(Boolean)[2];
+  const sw = DB.getSoftwareById(id);
+  if (!sw) return err(res, 404, 'Not found');
+
+  if (sw.filename) {
+    const fp = path.join(__dirname, '..', 'uploads', sw.filename);
+    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch(e) { console.warn('Could not delete file:', e.message); } }
+  }
+
+  DB.deleteSoftware(id);
+  console.log(`[Delete] Removed: ${sw.name}`);
+  ok(res, { message: `${sw.name} deleted` });
 }
 
 function parseBody(req) {
@@ -69,55 +160,4 @@ function parseBody(req) {
   });
 }
 
-// ── Download ──────────────────────────────────────────────────
-async function download(req, res, parsed) {
-  const user = requireAuth(req);
-  if (!user) return err(res, 401, 'Login required to download');
-
-  const id = parsed.pathname.split('/').filter(Boolean)[2]; // /api/software/:id/download
-  const sw = DB.getSoftwareById(id);
-  if (!sw) return err(res, 404, 'Software not found');
-
-  DB.incrementDownload(id);
-  DB.logDownload(user.id, id);
-
-  // if real file exists, serve it
-  if (sw.filename) {
-    const filePath = path.join(__dirname, '..', 'uploads', sw.filename);
-    if (fs.existsSync(filePath)) {
-      const stat = fs.statSync(filePath);
-      const ext  = path.extname(sw.filename);
-      res.writeHead(200, {
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${sw.name}_v${sw.version}${ext}"`,
-        'Content-Length': stat.size,
-      });
-      fs.createReadStream(filePath).pipe(res);
-      return;
-    }
-  }
-
-  // no file — return metadata only
-  ok(res, { message: `Download logged: ${sw.name} v${sw.version}`, software: sw });
-}
-
-// ── Delete ────────────────────────────────────────────────────
-async function deleteSw(req, res, parsed) {
-  const admin = requireAdmin(req);
-  if (!admin) return err(res, 403, 'Admin only');
-
-  const id = parsed.pathname.split('/').filter(Boolean)[2];
-  const sw = DB.getSoftwareById(id);
-  if (!sw) return err(res, 404, 'Not found');
-
-  // delete physical file if exists
-  if (sw.filename) {
-    const fp = path.join(__dirname, '..', 'uploads', sw.filename);
-    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch {} }
-  }
-
-  DB.deleteSoftware(id);
-  ok(res, { message: 'Deleted' });
-}
-
-module.exports = { list, upload, download, deleteSw };
+module.exports = { list, upload, download, serveFile, deleteSw };

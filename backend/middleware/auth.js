@@ -28,4 +28,7 @@ function requireAdmin(req) {
   return user && user.role === 'admin' ? user : null;
 }
 
-module.exports = { parseBody, requireAuth, requireAdmin };
+// expose verifyToken so routes can auth via query param (e.g. file downloads)
+function verifyToken(token) { return DB.verifyToken(token); }
+
+module.exports = { parseBody, requireAuth, requireAdmin, verifyToken };
