@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Installation Guide — ARC-NETWORK</title>
+<link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div class="page-wrap">
+<div class="page-content">
+  <div class="section-head">
+    <div class="section-eyebrow">// installation guides</div>
+    <h2 class="section-title">System <em>Setup</em></h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab(this,'arch')">ARCH LINUX</button>
+    <button class="tab-btn" onclick="switchTab(this,'win11')">WINDOWS 11</button>
+  </div>
+
+  <div id="arch" class="tab-pane active" style="margin-top:2rem"></div>
+  <div id="win11" class="tab-pane" style="margin-top:2rem"></div>
+</div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+function switchTab(btn, name) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  btn.classList.add('active');
+}
+
+function renderSteps(elId, steps) {
+  document.getElementById(elId).innerHTML = steps.map((s,i) => `
+    <div class="guide-step reveal">
+      <div class="step-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="step-body">
+        <div class="step-title">${s.title}</div>
+        <div class="step-desc">${s.desc}</div>
+        <div class="cmd-block">${s.cmd}</div>
+      </div>
+    </div>`).join('');
+  UI.initScrollReveal();
+}
+
+const archSteps = [
+  {title:'BOOT FROM ISO',desc:'Download Arch Linux ISO, verify integrity, and create bootable USB.',cmd:'sha256sum archlinux-*.iso\ndd bs=4M if=arch.iso of=/dev/sdX status=progress oflag=sync'},
+  {title:'CONNECT TO NETWORK',desc:'Configure keyboard and establish WiFi using iwctl.',cmd:'loadkeys us\niwctl\n  station wlan0 connect YourSSID\nping -c 3 archlinux.org'},
+  {title:'PARTITION THE DISK',desc:'Use cfdisk to create EFI, swap, and root partitions.',cmd:'lsblk\ncfdisk /dev/sda\n# sda1: EFI System  512MB\n# sda2: Linux swap   4GB\n# sda3: Linux fs    remainder'},
+  {title:'FORMAT & MOUNT',desc:'Format each partition and mount for installation.',cmd:'mkfs.fat -F32 /dev/sda1\nmkswap /dev/sda2 && swapon /dev/sda2\nmkfs.ext4 /dev/sda3\nmount /dev/sda3 /mnt\nmkdir /mnt/boot && mount /dev/sda1 /mnt/boot'},
+  {title:'INSTALL BASE SYSTEM',desc:'Install kernel, base system, and essential packages.',cmd:'pacstrap /mnt base linux linux-firmware\npacstrap /mnt base-devel vim networkmanager grub efibootmgr git sudo'},
+  {title:'CONFIGURE SYSTEM',desc:'Generate fstab, chroot, set timezone, locale, hostname.',cmd:'genfstab -U /mnt >> /mnt/etc/fstab\narch-chroot /mnt\nln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime\nhwclock --systohc\necho "en_US.UTF-8 UTF-8" >> /etc/locale.gen && locale-gen\necho "LANG=en_US.UTF-8" > /etc/locale.conf\necho "arc-machine" > /etc/hostname'},
+  {title:'INSTALL BOOTLOADER',desc:'Install and configure GRUB EFI bootloader.',cmd:'grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB\ngrub-mkconfig -o /boot/grub/grub.cfg'},
+  {title:'FINALIZE & REBOOT',desc:'Set root password, enable NetworkManager, exit and reboot.',cmd:'passwd\nuseradd -mG wheel arunachalam && passwd arunachalam\nsystemctl enable NetworkManager\nexit\numount -R /mnt\nreboot'},
+];
+
+const win11Steps = [
+  {title:'CHECK REQUIREMENTS',desc:'TPM 2.0, Secure Boot, 4GB RAM, 64GB storage, DirectX 12 GPU.',cmd:'# PowerShell (Admin):\nGet-TPM\nwinver'},
+  {title:'BYPASS TPM (OPTIONAL)',desc:'For unsupported hardware, use registry workaround.',cmd:'# regedit.exe:\n[HKEY_LOCAL_MACHINE\\SYSTEM\\Setup\\MoSetup]\n"AllowUpgradesWithUnsupportedTPMOrCPU"=dword:00000001'},
+  {title:'DOWNLOAD & VERIFY ISO',desc:'Get the official ISO from Microsoft and verify the hash.',cmd:'# PowerShell:\nGet-FileHash Win11_*.iso -Algorithm SHA256'},
+  {title:'CREATE BOOTABLE USB',desc:'Use Rufus: GPT + UEFI (non-CSM), NTFS, Windows 11 ISO.',cmd:'# Rufus settings:\nPartition scheme: GPT\nTarget system: UEFI (non CSM)\nFile system: NTFS\nCluster size: Default'},
+  {title:'CONFIGURE BIOS/UEFI',desc:'Enable Secure Boot, TPM, and UEFI boot mode.',cmd:'# BIOS settings:\nSecure Boot:   ENABLED\nTPM / fTPM:    ENABLED\nBoot mode:     UEFI only\nCSM:           DISABLED\nFast Boot:     OFF (during install)'},
+  {title:'INSTALL & PARTITION',desc:'Boot USB, Custom Install, create partitions.',cmd:'# Recommended layout (auto-created):\nEFI System:  100MB\nMSR:          16MB\nWindows C:\\   80GB+\nRecovery:     500MB'},
+  {title:'POST-INSTALL HARDENING',desc:'Apply security settings via PowerShell Admin.',cmd:'Set-MpPreference -DisableRealtimeMonitoring $false\nSet-MpPreference -EnableNetworkProtection Enabled\nSet-NetFirewallProfile -Profile Domain,Public,Private -Enabled True'},
+  {title:'INSTALL SECURITY TOOLS',desc:'Set up Chocolatey and install tools.',cmd:"Set-ExecutionPolicy Bypass -Scope Process\niex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))\nchoco install wireshark nmap burp-suite-free-edition -y"},
+];
+
+renderSteps('arch', archSteps);
+renderSteps('win11', win11Steps);
+</script>
+</body>
+</html>

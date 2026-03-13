@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support — ARC-NETWORK</title>
+<link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div class="page-wrap">
+<div class="page-content">
+  <div class="section-head">
+    <div class="section-eyebrow">// help desk</div>
+    <h2 class="section-title">Support <em>Center</em></h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="form-group"><label class="form-label">ISSUE TYPE</label>
+        <select class="form-input" id="s-type">
+          <option>Bug Report</option><option>Security Concern</option>
+          <option>Feature Request</option><option>Account Issue</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">SUBJECT</label>
+        <input type="text" class="form-input" id="s-subject" placeholder="Brief description...">
+      </div>
+      <div class="form-group"><label class="form-label">MESSAGE</label>
+        <textarea class="form-input" id="s-body" placeholder="Describe your issue in detail..."></textarea>
+      </div>
+      <div id="s-err" class="form-error mb-2"></div>
+      <button class="btn btn-solid" onclick="submit()">SUBMIT REPORT</button>
+      <div id="s-success" class="hidden" style="margin-top:1rem;font-family:var(--font-mono);font-size:.75rem;color:var(--green)">
+        ✓ TICKET SUBMITTED — We'll respond within 2 hours.
+      </div>
+    </div>
+    <div>
+      <div class="card mb-2"><span class="card-icon">📡</span><div class="card-title">RESPONSE TIME</div><div class="card-text">Average admin response within <strong style="color:var(--accent-b)">2 hours</strong> during active hours.</div></div>
+      <div class="card mb-2"><span class="card-icon">🔒</span><div class="card-title">PRIVACY</div><div class="card-text">Your support data is encrypted and never shared with third parties.</div></div>
+      <div class="card"><span class="card-icon">💬</span><div class="card-title">LIVE CHAT</div><div class="card-text">For urgent issues, <a href="/login" style="color:var(--accent-b)">login</a> and use the real-time chat in your dashboard.</div></div>
+    </div>
+  </div>
+</div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+async function submit() {
+  const subject = document.getElementById('s-subject').value.trim();
+  const message = document.getElementById('s-body').value.trim();
+  const errEl   = document.getElementById('s-err');
+  errEl.textContent = '';
+
+  if (!subject || !message) { errEl.textContent = 'Subject and message required'; return; }
+
+  if (!API.isLoggedIn()) {
+    // Guest ticket — just show success (no backend storage for guests)
+    document.getElementById('s-success').classList.remove('hidden');
+    document.getElementById('s-subject').value = '';
+    document.getElementById('s-body').value = '';
+    return;
+  }
+
+  try {
+    await API.createTicket({ type: document.getElementById('s-type').value, subject, message, priority: 'medium' });
+    document.getElementById('s-success').classList.remove('hidden');
+    document.getElementById('s-subject').value = '';
+    document.getElementById('s-body').value = '';
+  } catch(e) { errEl.textContent = e.message; }
+}
+</script>
+</body>
+</html>

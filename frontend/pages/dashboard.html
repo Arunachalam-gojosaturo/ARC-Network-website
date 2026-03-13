@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — ARC-NETWORK</title>
+<link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div class="page-wrap">
+<div class="dash-grid">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="s-avatar">U</div>
+      <div class="user-name" id="s-name">OPERATOR</div>
+      <div class="user-role-badge" id="s-role">USER</div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="#" onclick="tab('overview')" id="sn-overview" class="active"><span class="sn-icon">◈</span> OVERVIEW</a></li>
+      <li><a href="#" onclick="tab('downloads')" id="sn-downloads"><span class="sn-icon">📦</span> DOWNLOADS</a></li>
+      <li><a href="#" onclick="tab('tickets')" id="sn-tickets"><span class="sn-icon">🎫</span> MY TICKETS</a></li>
+      <li><a href="#" onclick="tab('chat')" id="sn-chat"><span class="sn-icon">💬</span> LIVE CHAT</a></li>
+      <li id="sn-admin-li" class="hidden"><a href="/admin"><span class="sn-icon">⚠</span> ADMIN PANEL</a></li>
+      <li style="margin-top:1.5rem"><a href="#" onclick="API.logout()"><span class="sn-icon">✕</span> DISCONNECT</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dash-main">
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview" class="tab-pane active">
+      <div class="dash-title">OVERVIEW</div>
+      <div class="grid-4 mb-4">
+        <div class="metric-card"><div class="metric-label">TOOLS AVAILABLE</div><div class="metric-value" id="m-tools">—</div></div>
+        <div class="metric-card"><div class="metric-label">TOPICS UNLOCKED</div><div class="metric-value cyan">10</div></div>
+        <div class="metric-card"><div class="metric-label">OPEN TICKETS</div><div class="metric-value red" id="m-tickets">—</div></div>
+        <div class="metric-card"><div class="metric-label">THREAT LEVEL</div><div class="metric-value warn">LOW</div></div>
+      </div>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot" style="background:#ff5f57"></div>
+          <div class="terminal-dot" style="background:#ffbd2e"></div>
+          <div class="terminal-dot" style="background:#28c840"></div>
+          <span>user-shell</span>
+        </div>
+        <div class="term-line"><span class="term-prompt">arc@network:~$ </span><span class="term-cmd">whoami</span></div>
+        <div class="term-line term-out" id="t-whoami">operator</div>
+        <div class="term-line"><span class="term-prompt">arc@network:~$ </span><span class="term-cmd">status --all</span></div>
+        <div class="term-line"><span class="term-ok">[✓] VPN: ACTIVE</span></div>
+        <div class="term-line"><span class="term-ok">[✓] FIREWALL: ENABLED</span></div>
+        <div class="term-line"><span class="term-warn">[!] 2 new advisories</span></div>
+        <div class="term-line"><span class="term-prompt">arc@network:~$ </span><span class="term-cursor"></span></div>
+      </div>
+    </div>
+
+    <!-- DOWNLOADS -->
+    <div id="tab-downloads" class="tab-pane">
+      <div class="dash-title">DOWNLOAD CENTER</div>
+      <div id="sw-list"><div class="text-muted" style="font-family:var(--font-mono);font-size:.75rem">LOADING...</div></div>
+    </div>
+
+    <!-- TICKETS -->
+    <div id="tab-tickets" class="tab-pane">
+      <div class="flex justify-between items-center mb-4">
+        <div class="dash-title" style="margin-bottom:0">SUPPORT TICKETS</div>
+        <button class="btn btn-ghost btn-sm" onclick="tab('new-ticket')">+ NEW TICKET</button>
+      </div>
+      <div id="ticket-list"><div class="text-muted" style="font-family:var(--font-mono);font-size:.75rem">LOADING...</div></div>
+    </div>
+
+    <!-- NEW TICKET -->
+    <div id="tab-new-ticket" class="tab-pane">
+      <div class="dash-title">FILE A TICKET</div>
+      <div style="max-width:600px">
+        <div class="form-group">
+          <label class="form-label">ISSUE TYPE</label>
+          <select class="form-input" id="t-type">
+            <option>Bug Report</option><option>Feature Request</option>
+            <option>Security Issue</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">SUBJECT</label>
+          <input type="text" class="form-input" id="t-subject" placeholder="Brief description...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">MESSAGE</label>
+          <textarea class="form-input" id="t-body" placeholder="Describe the issue in detail..."></textarea>
+        </div>
+        <div id="ticket-err" class="form-error mb-2"></div>
+        <button class="btn btn-solid" onclick="submitTicket()">SUBMIT TICKET</button>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div id="tab-chat" class="tab-pane">
+      <div class="dash-title">LIVE COMMS</div>
+      <div class="chat-wrap">
+        <div class="chat-header">
+          <div class="chat-dot"></div>
+          <span class="chat-title">ARC-NETWORK SUPPORT CHANNEL</span>
+          <span style="margin-left:auto;font-family:var(--font-mono);font-size:.6rem;color:var(--muted)">E2E ENCRYPTED</span>
+        </div>
+        <div class="chat-messages" id="chat-msgs"></div>
+        <div class="chat-input-wrap">
+          <input type="text" class="chat-input" id="chat-in" placeholder="Type message..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="btn btn-solid" onclick="sendChat()">SEND</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+if (!API.isLoggedIn()) window.location.href = '/login';
+
+const user = API.currentUser();
+
+// Init sidebar
+document.getElementById('s-avatar').textContent = user.avatar || user.username[0].toUpperCase();
+document.getElementById('s-name').textContent   = user.username.toUpperCase();
+const roleEl = document.getElementById('s-role');
+roleEl.textContent = user.role.toUpperCase();
+if (user.role === 'admin') { roleEl.classList.add('admin'); document.getElementById('sn-admin-li').classList.remove('hidden'); }
+document.getElementById('t-whoami').textContent = user.username;
+
+// Tab switching
+function tab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const sn = document.getElementById('sn-' + name);
+  if (sn) sn.classList.add('active');
+  if (name === 'downloads') loadSoftware();
+  if (name === 'tickets')   loadTickets();
+  if (name === 'chat')      loadChat();
+}
+
+// Software
+async function loadSoftware() {
+  try {
+    const { software } = await API.getSoftware();
+    document.getElementById('m-tools').textContent = software.length;
+    document.getElementById('sw-list').innerHTML = software.map(sw => `
+      <div class="sw-item">
+        <div class="sw-icon">${UI.escHtml(sw.icon)}</div>
+        <div class="sw-info">
+          <div class="sw-name">${UI.escHtml(sw.name)}</div>
+          <div class="sw-desc">${UI.escHtml(sw.description)}</div>
+          <div class="sw-meta">VER <span>${UI.escHtml(sw.version)}</span> | PLATFORM <span>${UI.escHtml(sw.platform)}</span> | SIZE <span>${UI.escHtml(sw.size)}</span> | DL <span>${sw.downloads}</span></div>
+        </div>
+        <button class="btn btn-cyan" onclick="dlSoftware('${sw.id}', this)">DOWNLOAD</button>
+      </div>`).join('');
+  } catch(e) { UI.notify(e.message, 'error'); }
+}
+
+async function dlSoftware(id, btn) {
+  try {
+    btn.textContent = '...'; btn.disabled = true;
+    const d = await API.download(id);
+    UI.notify('DOWNLOAD STARTED: ' + d.software.name);
+    loadSoftware();
+  } catch(e) { UI.notify(e.message, 'error'); btn.textContent = 'DOWNLOAD'; btn.disabled = false; }
+}
+
+// Tickets
+async function loadTickets() {
+  try {
+    const { tickets } = await API.myTickets();
+    const open = tickets.filter(t => t.status === 'open').length;
+    document.getElementById('m-tickets').textContent = open;
+    if (!tickets.length) {
+      document.getElementById('ticket-list').innerHTML = '<p class="text-muted" style="font-family:var(--font-mono);font-size:.75rem;padding:1rem">NO TICKETS FILED</p>';
+      return;
+    }
+    document.getElementById('ticket-list').innerHTML = tickets.map(t => `
+      <div class="ticket-item">
+        <div class="t-dot t-dot-${t.status==='open'?'open':t.status==='in-progress'?'prog':'done'}"></div>
+        <div class="ticket-info">
+          <div class="ticket-title">${UI.escHtml(t.subject)}</div>
+          <div class="ticket-meta">#${UI.escHtml(t.id)} — ${UI.escHtml(t.type)} — ${t.createdAt}</div>
+        </div>
+        <span class="tag tag-${t.status==='open'?'red':t.status==='in-progress'?'warn':'green'}">${t.status.toUpperCase()}</span>
+      </div>`).join('');
+  } catch(e) { UI.notify(e.message, 'error'); }
+}
+
+async function submitTicket() {
+  const subject = document.getElementById('t-subject').value.trim();
+  const message = document.getElementById('t-body').value.trim();
+  const errEl   = document.getElementById('ticket-err');
+  errEl.textContent = '';
+  if (!subject || !message) { errEl.textContent = 'Subject and message required'; return; }
+  try {
+    await API.createTicket({ type: document.getElementById('t-type').value, subject, message, priority: 'medium' });
+    UI.notify('TICKET SUBMITTED');
+    document.getElementById('t-subject').value = '';
+    document.getElementById('t-body').value = '';
+    tab('tickets');
+  } catch(e) { errEl.textContent = e.message; }
+}
+
+// Chat
+let chatPoll;
+async function loadChat() {
+  try {
+    const { messages } = await API.getMessages();
+    renderMessages(messages);
+  } catch(e) {}
+  clearInterval(chatPoll);
+  chatPoll = setInterval(async () => {
+    try { const { messages } = await API.getMessages(); renderMessages(messages); } catch(e) {}
+  }, 3000);
+}
+
+function renderMessages(messages) {
+  const el = document.getElementById('chat-msgs');
+  if (!el) return;
+  const wasBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 5;
+  el.innerHTML = messages.map(m => `
+    <div class="message ${m.fromUserId === user.id ? 'sent' : 'recv'}">
+      <div class="msg-bubble">${UI.escHtml(m.message)}</div>
+      <div class="msg-meta">${UI.escHtml(m.fromUsername)} — ${new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+  if (wasBottom) el.scrollTop = el.scrollHeight;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-in');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  try {
+    await API.sendMessage(msg);
+    loadChat();
+  } catch(e) { UI.notify(e.message, 'error'); }
+}
+
+// Load initial data
+loadSoftware();
+loadTickets();
+</script>
+</body>
+</html>

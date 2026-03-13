@@ -1,0 +1,161 @@
+{
+  "users": [
+    {
+      "id": "u-admin-001",
+      "username": "admin",
+      "email": "admin@arc-network.sh",
+      "passwordHash": "66e61fea6960e74e9dc797b6be16520a:553a62f2b8f5fd3230e72ea850a5d292d1eae5ec609c4c3b70687c82adc98513",
+      "role": "admin",
+      "joined": "2024-01-01",
+      "lastLogin": null,
+      "avatar": "A",
+      "banned": false
+    },
+    {
+      "id": "u-ghost-002",
+      "username": "ghost_op",
+      "email": "ghost@arc.sh",
+      "passwordHash": "52984b9bf1d6ea146e105a1bfdc95ee5:6d8d71f570eb479a8790d9728da4b8fc74df7277ad2f6d365b663a5e04f68503",
+      "role": "user",
+      "joined": "2024-06-15",
+      "lastLogin": null,
+      "avatar": "G",
+      "banned": false
+    },
+    {
+      "id": "u-16ed340af03c",
+      "username": "arunachalam",
+      "email": "cutyarunachalam1@gmail.com",
+      "passwordHash": "573df5e6fbddd33d130b4b6861147b82:57e316ba93192e872b8c9271125a17396c7f50ee331869b25dcfa378665e70a7",
+      "role": "admin",
+      "provider": "local",
+      "googleId": null,
+      "avatar": "A",
+      "joined": "2026-03-13",
+      "lastLogin": null,
+      "banned": false,
+      "bio": "Administrator"
+    }
+  ],
+  "software": [
+    {
+      "id": "sw-001",
+      "name": "NmapStealth",
+      "version": "7.94",
+      "category": "Network Scanner",
+      "platform": "Linux",
+      "description": "Advanced network discovery and security auditing with stealth scan capabilities.",
+      "size": "28.4 MB",
+      "icon": "🔍",
+      "downloads": 1420,
+      "uploadedBy": "admin",
+      "uploadedAt": "2024-01-15"
+    },
+    {
+      "id": "sw-002",
+      "name": "HashCrackPro",
+      "version": "2.1",
+      "category": "Password Tool",
+      "platform": "Cross-platform",
+      "description": "High-speed password hash cracker supporting MD5, SHA-1, SHA-256, bcrypt.",
+      "size": "45.2 MB",
+      "icon": "🔓",
+      "downloads": 892,
+      "uploadedBy": "admin",
+      "uploadedAt": "2024-02-01"
+    },
+    {
+      "id": "sw-003",
+      "name": "WireShark-ARC",
+      "version": "4.2",
+      "category": "Network Scanner",
+      "platform": "Cross-platform",
+      "description": "Custom-patched Wireshark build with ARC-NETWORK protocol dissectors.",
+      "size": "72.1 MB",
+      "icon": "📡",
+      "downloads": 2103,
+      "uploadedBy": "admin",
+      "uploadedAt": "2024-02-20"
+    },
+    {
+      "id": "sw-004",
+      "name": "MetaFramework-X",
+      "version": "6.3.1",
+      "category": "Exploit Framework",
+      "platform": "Linux",
+      "description": "Enhanced exploitation framework forked from Metasploit with custom modules.",
+      "size": "310 MB",
+      "icon": "💀",
+      "downloads": 654,
+      "uploadedBy": "admin",
+      "uploadedAt": "2024-03-05"
+    },
+    {
+      "id": "sw-005",
+      "name": "VolatileForensics",
+      "version": "3.0",
+      "category": "Forensics",
+      "platform": "Linux",
+      "description": "Memory forensics toolkit for analyzing RAM dumps and live system artifacts.",
+      "size": "88.7 MB",
+      "icon": "🧬",
+      "downloads": 431,
+      "uploadedBy": "admin",
+      "uploadedAt": "2024-03-18"
+    },
+    {
+      "id": "sw-006",
+      "name": "OSINT-Recon",
+      "version": "1.8",
+      "category": "OSINT",
+      "platform": "Cross-platform",
+      "description": "Automated open-source intelligence gathering and reporting framework.",
+      "size": "19.3 MB",
+      "icon": "👁",
+      "downloads": 1876,
+      "uploadedBy": "admin",
+      "uploadedAt": "2024-04-01"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "t-001",
+      "userId": "u-ghost-002",
+      "username": "ghost_op",
+      "type": "Bug Report",
+      "subject": "NmapStealth crash on IPv6",
+      "body": "App crashes when targeting IPv6 range on Arch Linux.",
+      "status": "open",
+      "priority": "high",
+      "createdAt": "2025-03-10",
+      "updatedAt": "2025-03-10",
+      "adminNote": ""
+    },
+    {
+      "id": "t-002",
+      "userId": "u-ghost-002",
+      "username": "ghost_op",
+      "type": "Feature Request",
+      "subject": "Add Tor proxy support",
+      "body": "Would be great to route scans through Tor.",
+      "status": "in-progress",
+      "priority": "medium",
+      "createdAt": "2025-03-08",
+      "updatedAt": "2025-03-09",
+      "adminNote": "Planned for v2.0"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m-001",
+      "fromUserId": "u-admin-001",
+      "fromUsername": "ADMIN",
+      "toUserId": null,
+      "message": "Welcome to ARC-NETWORK! How can I assist you today?",
+      "timestamp": "2026-03-12T18:18:34.894Z",
+      "isAdmin": true
+    }
+  ],
+  "downloads": [],
+  "sessions": []
+}

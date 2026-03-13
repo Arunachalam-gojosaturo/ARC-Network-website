@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — ARC-NETWORK</title>
+<link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div class="page-wrap">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-title">ENLIST</div>
+      <div class="auth-sub">// Create your encrypted identity</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">USERNAME</label>
+          <input type="text" class="form-input" id="f-user" placeholder="h4x0r_name" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">EMAIL</label>
+          <input type="email" class="form-input" id="f-email" placeholder="anon@mail.sh" autocomplete="email">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">PASSPHRASE</label>
+        <input type="password" class="form-input" id="f-pass" placeholder="min 8 chars, use symbols" autocomplete="new-password" oninput="checkStrength(this.value)">
+        <div class="progress-bar mt-1"><div class="progress-fill" id="pass-bar" style="width:0%"></div></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">CONFIRM PASSPHRASE</label>
+        <input type="password" class="form-input" id="f-pass2" placeholder="repeat passphrase" autocomplete="new-password">
+      </div>
+      <div id="reg-err" class="form-error mb-2"></div>
+
+      <button class="btn btn-solid btn-w" id="reg-btn" onclick="doRegister()">CREATE IDENTITY →</button>
+      <div class="auth-footer mt-2">Already enlisted? <a href="/login">LOGIN</a></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+if (API.isLoggedIn()) window.location.href = '/dashboard';
+
+function checkStrength(v) {
+  let s = 0;
+  if (v.length >= 8)  s += 25;
+  if (v.length >= 12) s += 25;
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s += 25;
+  if (/[0-9!@#$%^&*]/.test(v)) s += 25;
+  const bar = document.getElementById('pass-bar');
+  bar.style.width = s + '%';
+  bar.style.background = s<=25?'var(--red)':s<=50?'var(--warn)':s<=75?'var(--cyan)':'var(--green)';
+}
+
+async function doRegister() {
+  const username = document.getElementById('f-user').value.trim();
+  const email    = document.getElementById('f-email').value.trim();
+  const pass     = document.getElementById('f-pass').value;
+  const pass2    = document.getElementById('f-pass2').value;
+  const errEl    = document.getElementById('reg-err');
+  errEl.textContent = '';
+
+  if (!username || !email || !pass) { errEl.textContent = 'All fields required'; return; }
+  if (pass !== pass2) { errEl.textContent = 'Passphrases do not match'; return; }
+  if (pass.length < 8) { errEl.textContent = 'Passphrase too short (min 8)'; return; }
+
+  const btn = document.getElementById('reg-btn');
+  btn.textContent = 'CREATING...'; btn.disabled = true;
+  try {
+    await API.register(username, email, pass);
+    window.location.href = '/dashboard';
+  } catch (e) {
+    errEl.textContent = e.message;
+    btn.textContent = 'CREATE IDENTITY →'; btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

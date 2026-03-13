@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Downloads — ARC-NETWORK</title>
+<link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div class="page-wrap">
+<div class="page-content">
+  <div class="section-head">
+    <div class="section-eyebrow">// tool depot</div>
+    <h2 class="section-title">Software <em>Downloads</em></h2>
+    <div class="section-line"></div>
+  </div>
+  <div id="sw-list"><div style="font-family:var(--font-mono);font-size:.8rem;color:var(--muted)">LOADING DEPOT...</div></div>
+</div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+async function load() {
+  try {
+    const { software } = await API.getSoftware();
+    document.getElementById('sw-list').innerHTML = software.map(sw => `
+      <div class="sw-item reveal">
+        <div class="sw-icon">${UI.escHtml(sw.icon)}</div>
+        <div class="sw-info">
+          <div class="sw-name">${UI.escHtml(sw.name)}</div>
+          <div class="sw-desc">${UI.escHtml(sw.description)}</div>
+          <div class="sw-meta">
+            VER <span>${UI.escHtml(sw.version)}</span> |
+            PLATFORM <span>${UI.escHtml(sw.platform)}</span> |
+            CATEGORY <span>${UI.escHtml(sw.category)}</span> |
+            SIZE <span>${UI.escHtml(sw.size)}</span> |
+            DOWNLOADS <span>${sw.downloads}</span>
+          </div>
+        </div>
+        <button class="btn btn-cyan" onclick="dl('${sw.id}', this)">DOWNLOAD</button>
+      </div>`).join('');
+    UI.initScrollReveal();
+  } catch(e) { UI.notify(e.message, 'error'); }
+}
+
+async function dl(id, btn) {
+  if (!API.isLoggedIn()) { UI.notify('LOGIN REQUIRED TO DOWNLOAD', 'error'); setTimeout(() => window.location.href='/login', 1000); return; }
+  try {
+    btn.textContent = '...'; btn.disabled = true;
+    const d = await API.download(id);
+    UI.notify('DOWNLOAD STARTED: ' + d.software.name);
+    btn.textContent = '✓ DONE'; btn.style.background = 'var(--green)';
+    setTimeout(() => { btn.textContent = 'DOWNLOAD'; btn.disabled = false; btn.style.background = ''; }, 3000);
+    load();
+  } catch(e) { UI.notify(e.message, 'error'); btn.textContent = 'DOWNLOAD'; btn.disabled = false; }
+}
+
+document.addEventListener('DOMContentLoaded', load);
+</script>
+</body>
+</html>

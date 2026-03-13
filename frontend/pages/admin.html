@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — ARC-NETWORK</title>
+<link rel="stylesheet" href="/css/main.css">
+<style>
+  .progress-overlay{position:fixed;inset:0;background:rgba(4,2,14,.85);z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;}
+  .upload-progress-bar{width:320px;height:4px;background:var(--border2);}
+  .upload-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan));width:0%;transition:width .2s;}
+  .upload-status{font-family:var(--font-mono);font-size:.75rem;color:var(--cyan);letter-spacing:2px;}
+  .drop-zone{border:2px dashed var(--border2);padding:2.5rem;text-align:center;transition:all .3s;cursor:pointer;position:relative;background:rgba(4,2,14,.4);}
+  .drop-zone.drag{border-color:var(--accent-b);background:rgba(124,58,237,.06);box-shadow:var(--glow-v);}
+  .drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .file-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.3);padding:5px 12px;font-family:var(--font-mono);font-size:.7rem;color:var(--cyan-b);margin-top:.8rem;}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+<div class="page-content">
+  <div class="admin-bar">⚠ ADMIN CONTROL PANEL — RESTRICTED ACCESS</div>
+
+  <!-- STATS -->
+  <div class="grid-4 mb-4">
+    <div class="metric-card"><div class="metric-label">TOTAL USERS</div><div class="metric-value" id="st-users">—</div></div>
+    <div class="metric-card"><div class="metric-label">SOFTWARE</div><div class="metric-value cyan" id="st-sw">—</div></div>
+    <div class="metric-card"><div class="metric-label">OPEN TICKETS</div><div class="metric-value red" id="st-t">—</div></div>
+    <div class="metric-card"><div class="metric-label">TOTAL DOWNLOADS</div><div class="metric-value green" id="st-dl">—</div></div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="aTab(this,'users')">👥 USERS</button>
+    <button class="tab-btn" onclick="aTab(this,'upload')">📤 UPLOAD SOFTWARE</button>
+    <button class="tab-btn" onclick="aTab(this,'tickets')">🎫 TICKETS</button>
+    <button class="tab-btn" onclick="aTab(this,'chat')">💬 CHAT</button>
+  </div>
+
+  <!-- USERS TAB -->
+  <div id="ap-users" class="tab-pane active">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>USERNAME</th><th>EMAIL</th><th>ROLE</th><th>PROVIDER</th><th>JOINED</th><th>ACTIONS</th></tr></thead>
+        <tbody id="users-tb"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- UPLOAD TAB -->
+  <div id="ap-upload" class="tab-pane">
+    <div class="card mb-3" style="background:rgba(6,182,212,.05);border-color:rgba(6,182,212,.2)">
+      <div style="font-family:var(--font-mono);font-size:.72rem;color:var(--cyan-b);letter-spacing:1px">
+        ℹ You can upload a real file (zip, exe, sh, tar.gz etc.) or just register metadata without a file.
+        If a file is attached, users clicking DOWNLOAD will receive the actual file.
+      </div>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="drop-zone" id="drop-zone"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="onDrop(event)">
+      <input type="file" id="file-in" onchange="onFileSelect(this)">
+      <div style="font-size:2.5rem;margin-bottom:.8rem;pointer-events:none">📁</div>
+      <div style="font-family:var(--font-mono);font-size:.78rem;color:var(--muted);pointer-events:none">DRAG & DROP FILE HERE or CLICK TO SELECT</div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:rgba(107,91,149,.4);margin-top:.5rem;pointer-events:none">Supported: .zip .tar.gz .deb .exe .sh .py .bin — Max 500MB</div>
+    </div>
+    <div id="file-chip" class="hidden"></div>
+
+    <div class="grid-2 mt-3">
+      <div>
+        <div class="form-group"><label class="form-label">SOFTWARE NAME *</label><input type="text" class="form-input" id="sw-name" placeholder="ToolName"></div>
+        <div class="form-group"><label class="form-label">VERSION *</label><input type="text" class="form-input" id="sw-ver" placeholder="1.0.0"></div>
+        <div class="form-group"><label class="form-label">CATEGORY</label>
+          <select class="form-input" id="sw-cat">
+            <option>Network Scanner</option><option>Exploit Framework</option>
+            <option>Password Tool</option><option>Forensics</option>
+            <option>OSINT</option><option>Reverse Engineering</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">PLATFORM</label>
+          <select class="form-input" id="sw-plat">
+            <option>Linux</option><option>Windows</option><option>macOS</option><option>Cross-platform</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="form-group"><label class="form-label">DESCRIPTION</label><textarea class="form-input" id="sw-desc" style="height:120px" placeholder="What does this tool do?"></textarea></div>
+        <div class="form-group"><label class="form-label">SIZE (auto-detected if file uploaded)</label><input type="text" class="form-input" id="sw-size" placeholder="e.g. 28.4 MB"></div>
+        <div class="form-group"><label class="form-label">ICON EMOJI</label><input type="text" class="form-input" id="sw-icon" placeholder="🔍" maxlength="4"></div>
+      </div>
+    </div>
+    <div id="upload-err" class="form-error mb-2"></div>
+    <div id="upload-ok" class="hidden" style="font-family:var(--font-mono);font-size:.75rem;color:var(--green);margin-bottom:1rem"></div>
+    <button class="btn btn-cyan" id="upload-btn" onclick="uploadSoftware()">📤 PUBLISH TO DEPOT</button>
+  </div>
+
+  <!-- TICKETS TAB -->
+  <div id="ap-tickets" class="tab-pane">
+    <div id="admin-tickets"><div class="text-muted" style="font-family:var(--font-mono);font-size:.75rem">LOADING...</div></div>
+  </div>
+
+  <!-- CHAT TAB -->
+  <div id="ap-chat" class="tab-pane">
+    <div class="chat-wrap">
+      <div class="chat-header"><div class="chat-dot"></div><span class="chat-title">ADMIN BROADCAST CHANNEL</span><span style="margin-left:auto;font-family:var(--font-mono);font-size:.6rem;color:var(--red-b);letter-spacing:1px">ADMIN MODE</span></div>
+      <div class="chat-messages" id="adm-msgs"></div>
+      <div class="chat-input-wrap">
+        <input type="text" class="chat-input" id="adm-in" placeholder="Broadcast as ADMIN..." onkeydown="if(event.key==='Enter')sendAdminChat()">
+        <button class="btn btn-danger" onclick="sendAdminChat()">BROADCAST</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Upload progress overlay -->
+<div id="progress-overlay" class="progress-overlay hidden">
+  <div style="font-family:var(--font-head);font-size:1.2rem;letter-spacing:4px;color:var(--cyan)">UPLOADING</div>
+  <div class="upload-progress-bar"><div class="upload-progress-fill" id="up-bar"></div></div>
+  <div class="upload-status" id="up-status">PREPARING...</div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+if (!API.isLoggedIn() || !API.isAdmin()) window.location.href = '/login';
+
+var selectedFile = null;
+
+function aTab(btn, name) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ap-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='users')   loadUsers();
+  if(name==='tickets') loadTickets();
+  if(name==='chat')    loadChat();
+}
+
+async function loadStats() {
+  try {
+    const {stats} = await API.adminStats();
+    document.getElementById('st-users').textContent = stats.totalUsers;
+    document.getElementById('st-sw').textContent    = stats.totalSoftware;
+    document.getElementById('st-t').textContent     = stats.openTickets;
+    document.getElementById('st-dl').textContent    = stats.totalDownloads;
+  } catch(e) {}
+}
+
+async function loadUsers() {
+  try {
+    const {users} = await API.adminUsers();
+    const me = API.currentUser();
+    document.getElementById('users-tb').innerHTML = users.map(u=>`
+      <tr>
+        <td style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted)">${UI.escHtml(u.id.slice(-8))}</td>
+        <td style="font-family:var(--font-head);font-size:.8rem;letter-spacing:1px">${UI.escHtml(u.username)}</td>
+        <td class="text-muted">${UI.escHtml(u.email)}</td>
+        <td><span class="tag tag-${u.role==='admin'?'red':'blue'}">${u.role.toUpperCase()}</span></td>
+        <td><span class="tag tag-${u.provider==='google'?'warn':'violet'}">${(u.provider||'local').toUpperCase()}</span></td>
+        <td class="text-muted" style="font-family:var(--font-mono);font-size:.7rem">${u.joined||'—'}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          ${u.id!==me.id ? `
+            <button class="btn btn-ghost btn-sm" onclick="deleteUser('${u.id}','${UI.escHtml(u.username)}')">REMOVE</button>
+            ${u.role!=='admin' ? `<button class="btn btn-solid btn-sm" onclick="promoteUser('${u.id}','${UI.escHtml(u.username)}')">PROMOTE</button>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="banUser('${u.id}',${!u.banned},'${UI.escHtml(u.username)}')">${u.banned?'UNBAN':'BAN'}</button>
+          ` : '<span class="text-muted" style="font-family:var(--font-mono);font-size:.65rem">YOU</span>'}
+        </td>
+      </tr>`).join('');
+  } catch(e) { UI.notify(e.message,'error'); }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Remove user "${name}"? This cannot be undone.`)) return;
+  try { await API.adminDeleteUser(id); UI.notify('USER REMOVED'); loadUsers(); loadStats(); }
+  catch(e) { UI.notify(e.message,'error'); }
+}
+
+async function promoteUser(id, name) {
+  if (!confirm(`Promote "${name}" to admin?`)) return;
+  try {
+    await fetch('/api/admin/users/'+id+'/promote', { method:'POST', headers:{'Authorization':'Bearer '+localStorage.getItem('arc_token')} });
+    UI.notify(name+' PROMOTED TO ADMIN'); loadUsers();
+  } catch(e) { UI.notify(e.message,'error'); }
+}
+
+async function banUser(id, ban, name) {
+  try {
+    await fetch('/api/admin/users/'+id+'/ban', { method:'PUT', headers:{'Authorization':'Bearer '+localStorage.getItem('arc_token'),'Content-Type':'application/json'}, body: JSON.stringify({banned:ban}) });
+    UI.notify(ban ? name+' BANNED' : name+' UNBANNED'); loadUsers();
+  } catch(e) { UI.notify(e.message,'error'); }
+}
+
+// ── File Upload ─────────────────────────────────────────────
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  setFile(e.dataTransfer.files[0]);
+}
+function onFileSelect(input) {
+  if (input.files && input.files[0]) setFile(input.files[0]);
+}
+function setFile(f) {
+  if (!f) return;
+  selectedFile = f;
+  const chip = document.getElementById('file-chip');
+  chip.className = 'file-chip';
+  chip.innerHTML = '📎 '+UI.escHtml(f.name)+' ('+formatBytes(f.size)+')';
+  // auto fill name from filename
+  if (!document.getElementById('sw-name').value) {
+    document.getElementById('sw-name').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]/g,' ');
+  }
+  document.getElementById('sw-size').value = formatBytes(f.size);
+}
+function formatBytes(b) {
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  if(b<1073741824) return (b/1048576).toFixed(1)+' MB';
+  return (b/1073741824).toFixed(1)+' GB';
+}
+
+async function uploadSoftware() {
+  const name    = document.getElementById('sw-name').value.trim();
+  const version = document.getElementById('sw-ver').value.trim();
+  const errEl   = document.getElementById('upload-err');
+  const okEl    = document.getElementById('upload-ok');
+  errEl.textContent = ''; okEl.classList.add('hidden');
+
+  if (!name || !version) { errEl.textContent = '✗ Name and version are required'; return; }
+
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true; btn.textContent = 'UPLOADING...';
+
+  try {
+    if (selectedFile) {
+      // multipart upload with real file
+      showProgress();
+      const fd = new FormData();
+      fd.append('file',        selectedFile);
+      fd.append('name',        name);
+      fd.append('version',     version);
+      fd.append('category',    document.getElementById('sw-cat').value);
+      fd.append('platform',    document.getElementById('sw-plat').value);
+      fd.append('description', document.getElementById('sw-desc').value.trim());
+      fd.append('icon',        document.getElementById('sw-icon').value.trim()||'📦');
+
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const pct = Math.round(e.loaded/e.total*100);
+          document.getElementById('up-bar').style.width = pct+'%';
+          document.getElementById('up-status').textContent = 'UPLOADING... '+pct+'%';
+        }
+      };
+      await new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
+          else { try { reject(new Error(JSON.parse(xhr.responseText).message)); } catch { reject(new Error('Upload failed')); } }
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.open('POST', '/api/software');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.getItem('arc_token'));
+        xhr.send(fd);
+      });
+      hideProgress();
+    } else {
+      // JSON upload (no file)
+      await API.uploadSoftware({
+        name, version,
+        category:    document.getElementById('sw-cat').value,
+        platform:    document.getElementById('sw-plat').value,
+        description: document.getElementById('sw-desc').value.trim() || 'No description.',
+        size:        document.getElementById('sw-size').value.trim()  || 'Unknown',
+        icon:        document.getElementById('sw-icon').value.trim()  || '📦',
+      });
+    }
+
+    okEl.textContent = '✓ '+name+' published to depot successfully!';
+    okEl.classList.remove('hidden');
+    ['sw-name','sw-ver','sw-desc','sw-size','sw-icon'].forEach(id=>document.getElementById(id).value='');
+    selectedFile = null;
+    document.getElementById('file-chip').className = 'hidden';
+    document.getElementById('file-in').value = '';
+    loadStats();
+  } catch(e) {
+    hideProgress();
+    errEl.textContent = '✗ '+e.message;
+  }
+  btn.disabled = false; btn.textContent = '📤 PUBLISH TO DEPOT';
+}
+
+function showProgress() {
+  document.getElementById('progress-overlay').classList.remove('hidden');
+  document.getElementById('up-bar').style.width = '0%';
+  document.getElementById('up-status').textContent = 'PREPARING...';
+}
+function hideProgress() {
+  document.getElementById('progress-overlay').classList.add('hidden');
+}
+
+// ── Tickets ─────────────────────────────────────────────────
+async function loadTickets() {
+  try {
+    const {tickets} = await API.allTickets();
+    if (!tickets.length) { document.getElementById('admin-tickets').innerHTML = '<p class="text-muted" style="font-family:var(--font-mono);font-size:.75rem;padding:1rem">NO TICKETS</p>'; return; }
+    document.getElementById('admin-tickets').innerHTML = tickets.map(t=>`
+      <div class="ticket-item">
+        <div class="t-dot t-dot-${t.status==='open'?'open':t.status==='in-progress'?'prog':'done'}"></div>
+        <div class="ticket-info">
+          <div class="ticket-title">${UI.escHtml(t.subject)}</div>
+          <div class="ticket-meta">#${UI.escHtml(t.id.slice(-6))} — ${UI.escHtml(t.username)} — ${UI.escHtml(t.type)} — ${t.priority.toUpperCase()} — ${t.createdAt}</div>
+          ${t.body?`<div class="ticket-meta" style="margin-top:4px;color:var(--text)">${UI.escHtml(t.body.slice(0,120))}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          ${t.status!=='in-progress'?`<button class="btn btn-solid btn-sm" onclick="updateTicket('${t.id}','in-progress')">IN PROGRESS</button>`:''}
+          ${t.status!=='done'?`<button class="btn btn-cyan btn-sm" onclick="updateTicket('${t.id}','done')">RESOLVE</button>`:'<span class="text-green" style="font-family:var(--font-mono);font-size:.65rem">CLOSED</span>'}
+        </div>
+      </div>`).join('');
+  } catch(e) { UI.notify(e.message,'error'); }
+}
+
+async function updateTicket(id, status) {
+  try { await API.updateTicket(id,{status}); UI.notify('TICKET UPDATED'); loadTickets(); }
+  catch(e) { UI.notify(e.message,'error'); }
+}
+
+// ── Chat ─────────────────────────────────────────────────────
+var chatIv;
+async function loadChat() {
+  clearInterval(chatIv);
+  async function refresh() {
+    try {
+      const {messages} = await API.getMessages();
+      const me = API.currentUser();
+      const el = document.getElementById('adm-msgs');
+      if (!el) return;
+      const atBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 5;
+      el.innerHTML = messages.map(m=>`
+        <div class="message ${m.fromUserId===me.id?'sent':'recv'}">
+          <div class="msg-bubble">${UI.escHtml(m.message)}</div>
+          <div class="msg-meta">${UI.escHtml(m.fromUsername)} — ${new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+        </div>`).join('');
+      if (atBottom) el.scrollTop = el.scrollHeight;
+    } catch(e) {}
+  }
+  refresh();
+  chatIv = setInterval(refresh, 3000);
+}
+
+async function sendAdminChat() {
+  const input = document.getElementById('adm-in');
+  const msg = input.value.trim(); if (!msg) return;
+  input.value = '';
+  try { await API.sendMessage(msg); loadChat(); }
+  catch(e) { UI.notify(e.message,'error'); }
+}
+
+loadStats(); loadUsers();
+</script>
+</body>
+</html>
